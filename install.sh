@@ -10,8 +10,14 @@
 set -euo pipefail
 
 REPO="AndreFirmoo/gt7-companion-dist"
-INSTALL_DIR="$HOME/.gt7-companion/bin"
+DATA_DIR="$HOME/.gt7-companion"
+INSTALL_DIR="$DATA_DIR/bin"
 BIN="$INSTALL_DIR/gt7-companion"
+
+# Origin EXATA da plataforma web (sem barra final — é o que o navegador envia no
+# header Origin). O companion só aceita a web cuja origin estiver aqui; mudar de
+# domínio = trocar esta linha (nenhum rebuild do binário é necessário).
+WEB_ORIGIN="https://telemetry.nerdhelpsolucoes.com"
 
 say() { printf '\033[1;36m›\033[0m %s\n' "$*"; }
 ok()  { printf '\033[1;32m✓\033[0m %s\n' "$*"; }
@@ -52,6 +58,13 @@ if [ "$os" = "Darwin" ]; then
   xattr -dr com.apple.quarantine "$BIN" 2>/dev/null || true
 fi
 ok "Instalado em: $BIN"
+
+# --- aponta o companion para a plataforma web -------------------------------
+# Escreve <data_dir>/config.json com a origin da web. Sem isto, o navegador na
+# web de produção seria bloqueado por CORS/PNA ao falar com o companion local.
+mkdir -p "$DATA_DIR"
+printf '{ "web_origins": ["%s"] }\n' "$WEB_ORIGIN" > "$DATA_DIR/config.json"
+ok "Conectado à plataforma: $WEB_ORIGIN"
 
 # --- cria um atalho de duplo-clique -----------------------------------------
 create_mac_launcher() {

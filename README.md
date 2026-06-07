@@ -80,6 +80,16 @@ xattr -d com.apple.quarantine gt7-companion-macos-arm64   # libera o Gatekeeper
 
 **Windows:** duplo-clique no `.exe` → *Mais informações → Executar assim mesmo*.
 
+> **Importante na instalação manual:** o instalador de 1 linha já conecta o Companion à
+> plataforma automaticamente. Se você baixar manualmente, crie o arquivo
+> `~/.gt7-companion/config.json` (no Windows: `%USERPROFILE%\.gt7-companion\config.json`) com:
+>
+> ```json
+> { "web_origins": ["https://telemetry.nerdhelpsolucoes.com"] }
+> ```
+>
+> Sem isso, a plataforma no navegador não consegue se comunicar com o Companion.
+
 ---
 
 ## Requisitos
