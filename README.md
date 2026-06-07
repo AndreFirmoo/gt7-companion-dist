@@ -1,5 +1,8 @@
 # GT7 Companion
 
+[![Última versão](https://img.shields.io/github/v/release/AndreFirmoo/gt7-companion-dist?display_name=tag&label=vers%C3%A3o&color=06b6d4)](../../releases/latest)
+[![Baixar](https://img.shields.io/badge/⬇_baixar-Releases-22c55e)](../../releases/latest)
+
 O **GT7 Companion** é um programinha que roda no seu computador, **descobre o seu PS5 na
 rede** e captura a telemetria do **Gran Turismo 7**. Ele não tem login nem mexe na internet:
 quem conversa com a plataforma é o seu navegador.
@@ -52,13 +55,15 @@ Rode o **mesmo comando de instalação** de novo — ele baixa a versão mais no
 
 ## Instalação manual (sem o script)
 
-Baixe o arquivo do seu sistema na aba **[Releases](../../releases/latest)**:
+Baixe o arquivo do seu sistema (download direto da última release):
 
-| Sistema | Arquivo |
+| Sistema | Download direto |
 |---|---|
-| Linux (Ubuntu/Debian…), 64-bit Intel/AMD | `gt7-companion-linux-x86_64` |
-| macOS Apple Silicon (M1/M2/M3…) | `gt7-companion-macos-arm64` |
-| Windows 64-bit | `gt7-companion-windows-x86_64.exe` |
+| Linux (Ubuntu/Debian…), 64-bit Intel/AMD | [`gt7-companion-linux-x86_64`](../../releases/latest/download/gt7-companion-linux-x86_64) |
+| macOS Apple Silicon (M1/M2/M3…) | [`gt7-companion-macos-arm64`](../../releases/latest/download/gt7-companion-macos-arm64) |
+| Windows 64-bit | [`gt7-companion-windows-x86_64.exe`](../../releases/latest/download/gt7-companion-windows-x86_64.exe) |
+
+> Todos os arquivos e versões anteriores ficam na aba **[Releases](../../releases/latest)**.
 
 **Linux:**
 ```bash
