@@ -1,15 +1,21 @@
 #!/usr/bin/env bash
 # Instalador do GT7 Companion — macOS e Linux.
 #
-# Baixa o binário certo da última release, cria um atalho de duplo-clique
-# (Área de Trabalho no macOS / menu de aplicativos no Linux) e já abre o programa.
-# Rode de novo a qualquer momento para atualizar para a versão mais nova.
+# Baixa o binário certo da release PINADA abaixo, confere o SHA256SUMS dela contra o hash
+# embutido aqui, cria um atalho de duplo-clique (Área de Trabalho no macOS / menu de
+# aplicativos no Linux) e já abre o programa. Atualizar = rodar o comando de instalação que a
+# plataforma mostra (ele aponta para o instalador da versão nova).
 #
-# Uso (copie e cole no Terminal):
-#   curl -fsSL https://raw.githubusercontent.com/AndreFirmoo/gt7-companion-dist/Master/install.sh | bash
+# Uso: copie o comando da página da plataforma (app.apexracetelemetry.com.br → Companion). Ele
+# referencia este script por um COMMIT fixo deste repositório — nunca por branch.
 set -euo pipefail
 
 REPO="AndreFirmoo/gt7-companion-dist"
+# Release que este instalador instala e o SHA-256 do SHA256SUMS dela (raiz de confiança: quem
+# controla só este repositório não consegue trocar binário + manifesto sem quebrar este script).
+# Preenchidos pela esteira de release (raceTelemetry, companion-release.yml, job `release`).
+RELEASE_TAG="companion-v1.3.1"
+SUMS_SHA256=""
 DATA_DIR="$HOME/.gt7-companion"
 INSTALL_DIR="$DATA_DIR/bin"
 BIN="$INSTALL_DIR/gt7-companion"
@@ -41,40 +47,53 @@ case "$os" in
   *) die "Este instalador é só para macOS e Linux. No Windows use o instalador install.ps1 ou o .exe da aba Releases." ;;
 esac
 
-url="https://github.com/$REPO/releases/latest/download/$asset"
+[ -n "$SUMS_SHA256" ] || die "Este instalador não tem raiz de confiança (SUMS_SHA256 vazio). Use o comando de instalação da plataforma."
+base="https://github.com/$REPO/releases/download/$RELEASE_TAG"
 
-# --- baixa (atômico: .tmp -> mv) --------------------------------------------
-say "Baixando $asset (pode levar um tempo, ~100 MB)…"
+sha256_of() {
+  if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | awk '{print $1}'
+  else shasum -a 256 "$1" | awk '{print $1}'; fi
+}
+
+# --- baixa (atômico: .tmp -> mv); tudo temporário some em qualquer saída -----
+work="$(mktemp -d)"
+trap 'rm -rf "$work" "$BIN.tmp"' EXIT
 mkdir -p "$INSTALL_DIR"
-if ! curl -fL --progress-bar -o "$BIN.tmp" "$url"; then
-  rm -f "$BIN.tmp"
-  die "Não consegui baixar $asset. Esse build pode não existir na última release."
+
+# --- manifesto primeiro: precisa bater com o hash embutido ANTES de qualquer binário ----------
+say "Baixando o manifesto de integridade da release $RELEASE_TAG…"
+curl -fsSL -o "$work/SHA256SUMS" "$base/SHA256SUMS" \
+  || die "Não consegui baixar o SHA256SUMS da release $RELEASE_TAG; nada foi instalado."
+[ "$(sha256_of "$work/SHA256SUMS")" = "$SUMS_SHA256" ] \
+  || die "O SHA256SUMS da release não é o que este instalador conhece (esperado $SUMS_SHA256). Nada foi instalado — obtenha o comando de instalação de novo na plataforma."
+if command -v cosign >/dev/null 2>&1; then
+  # Verificação da assinatura Sigstore quando o cosign existe (cosign ≥ 3); sem ele, o hash
+  # embutido acima já é a raiz de confiança.
+  curl -fsSL -o "$work/SHA256SUMS.sigstore.json" "$base/SHA256SUMS.sigstore.json" \
+    || die "Não consegui baixar a assinatura da release; nada foi instalado."
+  cosign verify-blob --bundle "$work/SHA256SUMS.sigstore.json" \
+    --certificate-identity-regexp 'github.com/AndreFirmoo/raceTelemetry/.github/workflows/companion-release.yml' \
+    --certificate-oidc-issuer https://token.actions.githubusercontent.com "$work/SHA256SUMS" >/dev/null 2>&1 \
+    || die "A assinatura Sigstore do SHA256SUMS não verifica. Nada foi instalado."
+  ok "Assinatura Sigstore verificada"
 fi
+
+say "Baixando $asset (pode levar um tempo, ~100 MB)…"
+curl -fL --progress-bar -o "$BIN.tmp" "$base/$asset" \
+  || die "Não consegui baixar $asset da release $RELEASE_TAG."
 
 # --- confere a integridade ANTES de dar permissão/remover quarentena ---------
-# SHA256SUMS é publicado pela esteira de release (assinado via Sigstore; ver README).
-sums_url="https://github.com/$REPO/releases/latest/download/SHA256SUMS"
-if ! curl -fsSL -o "$INSTALL_DIR/SHA256SUMS" "$sums_url"; then
-  rm -f "$BIN.tmp"
-  die "Não consegui baixar o SHA256SUMS da release; instalação abortada (nada foi instalado)."
-fi
-expected="$(awk -v name="$asset" '$2 == name || $2 == "*" name {print $1}' "$INSTALL_DIR/SHA256SUMS" | head -1)"
-[ -n "$expected" ] || { rm -f "$BIN.tmp"; die "SHA256SUMS não lista $asset; instalação abortada."; }
-if command -v sha256sum >/dev/null 2>&1; then
-  actual="$(sha256sum "$BIN.tmp" | awk '{print $1}')"
-else
-  actual="$(shasum -a 256 "$BIN.tmp" | awk '{print $1}')"
-fi
-if [ "$actual" != "$expected" ]; then
-  rm -f "$BIN.tmp"
-  die "Hash do $asset não confere com o SHA256SUMS da release (esperado $expected, baixado $actual). Nada foi instalado."
-fi
-ok "Integridade conferida (SHA-256 bate com a release)"
+expected="$(awk -v name="$asset" '$2 == name || $2 == "*" name {print $1}' "$work/SHA256SUMS" | head -1)"
+[ -n "$expected" ] || die "SHA256SUMS não lista $asset; instalação abortada."
+actual="$(sha256_of "$BIN.tmp")"
+[ "$actual" = "$expected" ] \
+  || die "Hash do $asset não confere com o SHA256SUMS da release (esperado $expected, baixado $actual). Nada foi instalado."
+ok "Integridade conferida (SHA-256 $actual bate com a release $RELEASE_TAG)"
 mv -f "$BIN.tmp" "$BIN"
 chmod +x "$BIN"
 
 # macOS: remove a quarentena para o Gatekeeper não bloquear (binário sem certificado de código;
-# a integridade já foi conferida acima contra o SHA256SUMS assinado da release)
+# a integridade foi conferida acima contra o SHA256SUMS cujo hash está embutido neste script)
 if [ "$os" = "Darwin" ]; then
   xattr -dr com.apple.quarantine "$BIN" 2>/dev/null || true
 fi

@@ -14,43 +14,49 @@ quem conversa com a plataforma é o seu navegador.
 
 ## Instalar (jeito fácil — 1 comando)
 
+Copie o comando de instalação **na plataforma** (app.apexracetelemetry.com.br → Companion). Ele é
+assim, com a `<ref>` sendo um commit fixo deste repositório — nunca uma branch:
+
 ### macOS e Linux
 
-Abra o **Terminal**, cole a linha abaixo e tecle Enter:
-
 ```bash
-curl -fsSL https://raw.githubusercontent.com/AndreFirmoo/gt7-companion-dist/Master/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/AndreFirmoo/gt7-companion-dist/<ref>/install.sh | bash
 ```
 
-Isso baixa o programa, cria um atalho **GT7 Companion** (na Área de Trabalho no macOS / no
-menu de aplicativos no Linux) e já abre. **Da próxima vez é só duplo-clique no atalho.**
+Isso baixa o programa da release que o instalador conhece, confere a integridade, cria um atalho
+**GT7 Companion** (na Área de Trabalho no macOS / no menu de aplicativos no Linux) e já abre.
+**Da próxima vez é só duplo-clique no atalho.**
 
 ### Windows
 
-Abra o **PowerShell**, cole e tecle Enter:
-
 ```powershell
-irm https://raw.githubusercontent.com/AndreFirmoo/gt7-companion-dist/Master/install.ps1 | iex
+irm https://raw.githubusercontent.com/AndreFirmoo/gt7-companion-dist/<ref>/install.ps1 | iex
 ```
 
-> Prefere sem comando? Baixe o `.exe` na aba **[Releases](../../releases/latest)** e dê
-> duplo-clique. Se aparecer o aviso do SmartScreen: **Mais informações → Executar assim mesmo**.
+> Prefere sem comando? Baixe o `.exe` na aba **[Releases](../../releases/latest)**, confira o hash
+> (seção abaixo) e dê duplo-clique. Se aparecer o aviso do SmartScreen: **Mais informações →
+> Executar assim mesmo**.
 
 ---
 
 ## Integridade e assinatura
 
 Cada release publica `SHA256SUMS` (hash de cada binário) e `SHA256SUMS.sigstore.json` (assinatura
-Sigstore keyless gerada pela esteira de build). Os instaladores acima **conferem o hash do binário
-contra o `SHA256SUMS` da mesma release antes de instalar**; se não bater, nada é instalado.
+Sigstore keyless gerada e verificada pela esteira de build). Os instaladores acima **pinam a
+release e o SHA-256 do próprio `SHA256SUMS`**, e conferem o hash do binário antes de instalar; se
+qualquer coisa não bater, nada é instalado. **A assinatura Sigstore só é conferida pelo instalador
+se você tiver o `cosign` (≥ 3.0) instalado** — sem ele, a raiz de confiança é o hash embutido no
+instalador, servido pela plataforma.
 
-Para verificar você mesmo (opcional, com `cosign` instalado):
+Para verificar você mesmo (cosign ≥ 3.0; baixe `SHA256SUMS` e `SHA256SUMS.sigstore.json` da release):
 
 ```bash
 cosign verify-blob --bundle SHA256SUMS.sigstore.json \
   --certificate-identity-regexp 'github.com/AndreFirmoo/raceTelemetry/.github/workflows/companion-release.yml' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com SHA256SUMS
-sha256sum -c SHA256SUMS --ignore-missing
+sha256sum -c SHA256SUMS --ignore-missing            # Linux
+shasum -a 256 -c SHA256SUMS --ignore-missing        # macOS
+Get-FileHash -Algorithm SHA256 .\gt7-companion-windows-x86_64.exe   # Windows: compare com o SHA256SUMS
 ```
 
 ## Como usar
@@ -64,7 +70,8 @@ Para **encerrar**, feche a janela do Companion (ou tecle `Ctrl+C` nela).
 
 ## Atualizar
 
-Rode o **mesmo comando de instalação** de novo — ele baixa a versão mais nova por cima.
+Copie o comando de instalação **atual** na plataforma e rode de novo — cada versão do instalador
+pina a release que instala.
 
 ---
 
@@ -82,12 +89,14 @@ Baixe o arquivo do seu sistema (download direto da última release):
 
 **Linux:**
 ```bash
+sha256sum gt7-companion-linux-x86_64        # compare com a linha do SHA256SUMS da release
 chmod +x gt7-companion-linux-x86_64
 ./gt7-companion-linux-x86_64
 ```
 
 **macOS:**
 ```bash
+shasum -a 256 gt7-companion-macos-arm64     # compare com a linha do SHA256SUMS da release
 chmod +x gt7-companion-macos-arm64
 xattr -d com.apple.quarantine gt7-companion-macos-arm64   # libera o Gatekeeper
 ./gt7-companion-macos-arm64
@@ -100,7 +109,7 @@ xattr -d com.apple.quarantine gt7-companion-macos-arm64   # libera o Gatekeeper
 > `~/.gt7-companion/config.json` (no Windows: `%USERPROFILE%\.gt7-companion\config.json`) com:
 >
 > ```json
-> { "web_origins": ["https://telemetry.nerdhelpsolucoes.com"] }
+> { "web_origins": ["https://app.apexracetelemetry.com.br"] }
 > ```
 >
 > Sem isso, a plataforma no navegador não consegue se comunicar com o Companion.
