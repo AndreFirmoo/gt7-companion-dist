@@ -66,16 +66,19 @@ curl -fsSL -o "$work/SHA256SUMS" "$base/SHA256SUMS" \
   || die "Não consegui baixar o SHA256SUMS da release $RELEASE_TAG; nada foi instalado."
 [ "$(sha256_of "$work/SHA256SUMS")" = "$SUMS_SHA256" ] \
   || die "O SHA256SUMS da release não é o que este instalador conhece (esperado $SUMS_SHA256). Nada foi instalado — obtenha o comando de instalação de novo na plataforma."
-if command -v cosign >/dev/null 2>&1; then
-  # Verificação da assinatura Sigstore quando o cosign existe (cosign ≥ 3); sem ele, o hash
-  # embutido acima já é a raiz de confiança.
+cosign_major="$(cosign version 2>/dev/null | sed -nE 's/^GitVersion:[[:space:]]*v?([0-9]+).*/\1/p' | head -1 || true)"
+if [ -n "$cosign_major" ] && [ "$cosign_major" -ge 3 ] 2>/dev/null; then
+  # Verificação da assinatura Sigstore (bundle no formato novo: só cosign ≥ 3 lê; 2.x daria
+  # alarme falso). Sem cosign, o hash embutido acima já é a raiz de confiança.
   curl -fsSL -o "$work/SHA256SUMS.sigstore.json" "$base/SHA256SUMS.sigstore.json" \
     || die "Não consegui baixar a assinatura da release; nada foi instalado."
   cosign verify-blob --bundle "$work/SHA256SUMS.sigstore.json" \
-    --certificate-identity-regexp 'github.com/AndreFirmoo/raceTelemetry/.github/workflows/companion-release.yml' \
-    --certificate-oidc-issuer https://token.actions.githubusercontent.com "$work/SHA256SUMS" >/dev/null 2>&1 \
-    || die "A assinatura Sigstore do SHA256SUMS não verifica. Nada foi instalado."
+    --certificate-identity-regexp '^https://github\.com/AndreFirmoo/raceTelemetry/\.github/workflows/companion-release\.yml@refs/tags/companion-v' \
+    --certificate-oidc-issuer https://token.actions.githubusercontent.com "$work/SHA256SUMS" >"$work/cosign.log" 2>&1 \
+    || { cat "$work/cosign.log" >&2; die "A assinatura Sigstore do SHA256SUMS não verifica. Nada foi instalado."; }
   ok "Assinatura Sigstore verificada"
+elif command -v cosign >/dev/null 2>&1; then
+  say "cosign < 3 não lê o bundle Sigstore novo; assinatura não conferida (o hash pinado já garante a integridade)"
 fi
 
 say "Baixando $asset (pode levar um tempo, ~100 MB)…"
@@ -114,6 +117,7 @@ create_mac_launcher() {
 # Atalho do GT7 Companion — duplo-clique para abrir. Feche a janela para encerrar.
 clear
 echo "Iniciando o GT7 Companion…"
+rm -rf "$work"   # o exec substitui o processo e o trap EXIT não roda
 exec "$BIN"
 EOF
   chmod +x "$launcher"

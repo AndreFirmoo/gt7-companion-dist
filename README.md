@@ -14,8 +14,9 @@ quem conversa com a plataforma é o seu navegador.
 
 ## Instalar (jeito fácil — 1 comando)
 
-Copie o comando de instalação **na plataforma** (app.apexracetelemetry.com.br → Companion). Ele é
-assim, com a `<ref>` sendo um commit fixo deste repositório — nunca uma branch:
+Copie o comando de instalação **na plataforma** (app.apexracetelemetry.com.br → Companion). Os
+comandos abaixo são ilustrativos: a `<ref>` é o commit fixo deste repositório que a plataforma
+publica (nunca uma branch nem uma tag) — sem ele o comando não funciona, de propósito:
 
 ### macOS e Linux
 
@@ -44,15 +45,15 @@ irm https://raw.githubusercontent.com/AndreFirmoo/gt7-companion-dist/<ref>/insta
 Cada release publica `SHA256SUMS` (hash de cada binário) e `SHA256SUMS.sigstore.json` (assinatura
 Sigstore keyless gerada e verificada pela esteira de build). Os instaladores acima **pinam a
 release e o SHA-256 do próprio `SHA256SUMS`**, e conferem o hash do binário antes de instalar; se
-qualquer coisa não bater, nada é instalado. **A assinatura Sigstore só é conferida pelo instalador
-se você tiver o `cosign` (≥ 3.0) instalado** — sem ele, a raiz de confiança é o hash embutido no
-instalador, servido pela plataforma.
+qualquer coisa não bater, nada é instalado. **No macOS/Linux, o instalador também confere a
+assinatura Sigstore se você tiver o `cosign` ≥ 3.0 instalado** (o do Windows não confere); sem
+isso, a raiz de confiança é o hash embutido no instalador, servido pela plataforma.
 
 Para verificar você mesmo (cosign ≥ 3.0; baixe `SHA256SUMS` e `SHA256SUMS.sigstore.json` da release):
 
 ```bash
 cosign verify-blob --bundle SHA256SUMS.sigstore.json \
-  --certificate-identity-regexp 'github.com/AndreFirmoo/raceTelemetry/.github/workflows/companion-release.yml' \
+  --certificate-identity-regexp '^https://github\.com/AndreFirmoo/raceTelemetry/\.github/workflows/companion-release\.yml@refs/tags/companion-v' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com SHA256SUMS
 sha256sum -c SHA256SUMS --ignore-missing            # Linux
 shasum -a 256 -c SHA256SUMS --ignore-missing        # macOS
