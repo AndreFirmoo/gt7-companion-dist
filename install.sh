@@ -117,7 +117,6 @@ create_mac_launcher() {
 # Atalho do GT7 Companion — duplo-clique para abrir. Feche a janela para encerrar.
 clear
 echo "Iniciando o GT7 Companion…"
-rm -rf "$work"   # o exec substitui o processo e o trap EXIT não roda
 exec "$BIN"
 EOF
   chmod +x "$launcher"
@@ -163,4 +162,5 @@ Da próxima vez, é só usar o atalho "GT7 Companion".
 Abrindo agora… (feche a janela ou tecle Ctrl+C para encerrar)
 EOF
 printf '\n'
+rm -rf "$work"   # o exec substitui o processo: o trap EXIT não roda (manifesto/bundle/log ficariam no TMPDIR)
 exec "$BIN"

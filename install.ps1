@@ -8,6 +8,8 @@
 # referencia este script por um COMMIT fixo deste repositório — nunca por branch.
 
 $ErrorActionPreference = "Stop"
+# Windows PowerShell 5.1: sem isto o download pode cair em TLS 1.0 e ser recusado pelo GitHub
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 $repo  = "AndreFirmoo/gt7-companion-dist"
 $asset = "gt7-companion-windows-x86_64.exe"
@@ -38,7 +40,7 @@ try {
   }
 
   Write-Host "Baixando $asset ..." -ForegroundColor Cyan
-  Invoke-WebRequest -Uri "$base/$asset" -OutFile $tmp
+  Invoke-WebRequest -Uri "$base/$asset" -OutFile $tmp -UseBasicParsing
 
   # confere a integridade ANTES de instalar (Get-Content -Raw: texto, mesmo se o servidor mandar octet-stream)
   $expected = $null
