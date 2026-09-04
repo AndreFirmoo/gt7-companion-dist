@@ -17,7 +17,7 @@ BIN="$INSTALL_DIR/gt7-companion"
 # Origin EXATA da plataforma web (sem barra final — é o que o navegador envia no
 # header Origin). O companion só aceita a web cuja origin estiver aqui; mudar de
 # domínio = trocar esta linha (nenhum rebuild do binário é necessário).
-WEB_ORIGIN="https://telemetry.nerdhelpsolucoes.com"
+WEB_ORIGIN="https://app.apexracetelemetry.com.br"
 
 say() { printf '\033[1;36m›\033[0m %s\n' "$*"; }
 ok()  { printf '\033[1;32m✓\033[0m %s\n' "$*"; }
@@ -50,10 +50,31 @@ if ! curl -fL --progress-bar -o "$BIN.tmp" "$url"; then
   rm -f "$BIN.tmp"
   die "Não consegui baixar $asset. Esse build pode não existir na última release."
 fi
+
+# --- confere a integridade ANTES de dar permissão/remover quarentena ---------
+# SHA256SUMS é publicado pela esteira de release (assinado via Sigstore; ver README).
+sums_url="https://github.com/$REPO/releases/latest/download/SHA256SUMS"
+if ! curl -fsSL -o "$INSTALL_DIR/SHA256SUMS" "$sums_url"; then
+  rm -f "$BIN.tmp"
+  die "Não consegui baixar o SHA256SUMS da release; instalação abortada (nada foi instalado)."
+fi
+expected="$(awk -v name="$asset" '$2 == name || $2 == "*" name {print $1}' "$INSTALL_DIR/SHA256SUMS" | head -1)"
+[ -n "$expected" ] || { rm -f "$BIN.tmp"; die "SHA256SUMS não lista $asset; instalação abortada."; }
+if command -v sha256sum >/dev/null 2>&1; then
+  actual="$(sha256sum "$BIN.tmp" | awk '{print $1}')"
+else
+  actual="$(shasum -a 256 "$BIN.tmp" | awk '{print $1}')"
+fi
+if [ "$actual" != "$expected" ]; then
+  rm -f "$BIN.tmp"
+  die "Hash do $asset não confere com o SHA256SUMS da release (esperado $expected, baixado $actual). Nada foi instalado."
+fi
+ok "Integridade conferida (SHA-256 bate com a release)"
 mv -f "$BIN.tmp" "$BIN"
 chmod +x "$BIN"
 
-# macOS: remove a quarentena para o Gatekeeper não bloquear (binário não assinado)
+# macOS: remove a quarentena para o Gatekeeper não bloquear (binário sem certificado de código;
+# a integridade já foi conferida acima contra o SHA256SUMS assinado da release)
 if [ "$os" = "Darwin" ]; then
   xattr -dr com.apple.quarantine "$BIN" 2>/dev/null || true
 fi

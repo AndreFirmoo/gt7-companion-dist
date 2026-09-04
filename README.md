@@ -38,6 +38,21 @@ irm https://raw.githubusercontent.com/AndreFirmoo/gt7-companion-dist/Master/inst
 
 ---
 
+## Integridade e assinatura
+
+Cada release publica `SHA256SUMS` (hash de cada binário) e `SHA256SUMS.sigstore.json` (assinatura
+Sigstore keyless gerada pela esteira de build). Os instaladores acima **conferem o hash do binário
+contra o `SHA256SUMS` da mesma release antes de instalar**; se não bater, nada é instalado.
+
+Para verificar você mesmo (opcional, com `cosign` instalado):
+
+```bash
+cosign verify-blob --bundle SHA256SUMS.sigstore.json \
+  --certificate-identity-regexp 'github.com/AndreFirmoo/raceTelemetry/.github/workflows/companion-release.yml' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com SHA256SUMS
+sha256sum -c SHA256SUMS --ignore-missing
+```
+
 ## Como usar
 
 1. Ligue o **PS5 com o Gran Turismo 7 aberto**, na **mesma rede** do computador.
