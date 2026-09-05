@@ -18,7 +18,7 @@ $bin   = Join-Path $dir "gt7-companion.exe"
 # Release que este instalador instala e o SHA-256 do SHA256SUMS dela (raiz de confiança).
 # Preenchidos pela esteira de release (raceTelemetry, companion-release.yml, job `release`).
 $releaseTag = "companion-v1.3.1"
-$sumsSha256 = ""
+$sumsSha256 = "c083a139fc8839e7fd469549cf90070686a29f18c732d14f1a8dcdec2aa03628"
 $base = "https://github.com/$repo/releases/download/$releaseTag"
 
 # Origin EXATA da plataforma web (sem barra final — é o que o navegador envia).
